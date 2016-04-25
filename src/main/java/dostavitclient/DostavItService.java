@@ -20,6 +20,7 @@ import java.util.List;
 public class DostavItService {
     public static final String DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     public static final String DATETIME_FORMAT_WITH_TIME_ZONE = "yyyy-MM-dd'T'HH:mm:ssZ";
+    public static final int TIMEOUT_VALUE = 5 * 60000; // // 5 minutes connect  and read timeout
 
     public static List<CarrierInfo> getCarriers() throws DostavItServiceException {
         try {
@@ -60,7 +61,6 @@ public class DostavItService {
         try {
             String request = getJsonString(fromCity, toCity, lengthCm, widthCm, heightCm, weightKg, costRub, shipDate);
             String response = sendPostRequest(String.format("http://dostav.it/api/rates/%s", carrier), request.toString());
-            System.out.print(fromCity);
             List<Rate> rateList = new ArrayList<Rate>();
             if (response == null || !response.isEmpty()) {
                 rateList = parseListOfRates(response);
@@ -76,55 +76,82 @@ public class DostavItService {
     }
 
     private static String sendPostRequest(String urlString, String requestContent) throws Exception {
-        String response;
-        HttpURLConnection conn;
-        URL url = new URL(urlString);
-        conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json;charset=utf-8");
-        conn.setRequestProperty("Accept", "application/json;charset=utf-8");
+        String response = null;
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(urlString);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(TIMEOUT_VALUE);
+            conn.setReadTimeout(TIMEOUT_VALUE);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+            conn.setRequestProperty("Accept", "application/json;charset=utf-8");
 
-        // Send post request
-        conn.setDoOutput(true);
-        BufferedWriter out =
-                new BufferedWriter(new OutputStreamWriter(conn.getOutputStream(), "UTF-8"));
-        out.write(requestContent);
-        out.flush();
-        out.close();
+            // Send post request
+            conn.setDoOutput(true);
+            BufferedWriter out =
+                    new BufferedWriter(new OutputStreamWriter(conn.getOutputStream(), "UTF-8"));
+            out.write(requestContent);
+            out.flush();
+            out.close();
 
-        if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
-            throw new Exception("Failed : HTTP error code : " + conn.getResponseCode());
+            if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                throw new Exception("Failed : HTTP error code : " + conn.getResponseCode());
+            }
+            response = readResponse(conn);
+        } catch (Exception ex) {
+            throw ex;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
-        response = readResponse(conn);
         return response;
     }
 
     private static String sendGetRequest(String urlString) throws Exception {
-        String response;
-        HttpURLConnection conn;
-        URL url = new URL(urlString);
-        conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("Content-Type", "application/json;charset=utf-8");
-        conn.setRequestProperty("Accept", "application/json;charset=utf-8");
-        if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
-            throw new Exception("Failed : HTTP error code : " + conn.getResponseCode());
+        String response = null;
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(urlString);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(TIMEOUT_VALUE);
+            conn.setReadTimeout(TIMEOUT_VALUE);
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+            conn.setRequestProperty("Accept", "application/json;charset=utf-8");
+            if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                throw new Exception("Failed : HTTP error code : " + conn.getResponseCode());
+            }
+            response = readResponse(conn);
+        } catch (Exception ex) {
+            throw ex;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
-        response = readResponse(conn);
         return response;
     }
 
     private static String readResponse(HttpURLConnection conn) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
-        StringBuffer responseStringBuffer = new StringBuffer();
-        String inputLine;
-        while ((inputLine = br.readLine()) != null) {
-            responseStringBuffer.append(inputLine);
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
+            StringBuffer responseStringBuffer = new StringBuffer();
+            String inputLine;
+            while ((inputLine = br.readLine()) != null) {
+                responseStringBuffer.append(inputLine);
+            }
+            String response = responseStringBuffer.toString();
+            return response;
+        } catch (IOException ex) {
+            throw ex;
+        } finally {
+            if (br != null) {
+                br.close();
+            }
         }
-        br.close();
-        conn.disconnect();
-        String response = responseStringBuffer.toString();
-        return response;
     }
 
     private static List<CarrierInfo> parseListOfCarriers(String response) {
