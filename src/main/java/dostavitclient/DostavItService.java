@@ -177,10 +177,10 @@ public class DostavItService {
 
     private static CarrierInfo createCarrierInfo(JSONObject carrier) {
         CarrierInfo carrierInfo = new CarrierInfo();
-        carrierInfo.setFullName(carrier.getString("fullName"));
-        carrierInfo.setName(carrier.getString("name"));
-        carrierInfo.setUrl(carrier.getString("url"));
-        carrierInfo.setLargeLogoUrl(carrier.getString("largeLogoUrl"));
+        carrierInfo.setFullName(carrier.optString("fullName", null));
+        carrierInfo.setName(carrier.optString("name", null));
+        carrierInfo.setUrl(carrier.optString("url", null));
+        carrierInfo.setLargeLogoUrl(carrier.optString("largeLogoUrl", null));
         JSONArray services = carrier.getJSONArray("services");
         if (services != null && services.length() != 0) {
             carrierInfo.setServices(new ArrayList<DeliveryService>());
@@ -194,8 +194,8 @@ public class DostavItService {
 
     private static DeliveryService createDeliveryService(JSONObject service) {
         DeliveryService deliveryService = new DeliveryService();
-        deliveryService.setName(service.getString("name"));
-        deliveryService.setFullName(service.getString("fullName"));
+        deliveryService.setName(service.optString("name", null));
+        deliveryService.setFullName(service.optString("fullName", null));
         return deliveryService;
     }
 
@@ -299,7 +299,7 @@ public class DostavItService {
         return new DostavItServiceException(msg);
     }
 
-    private static void validateNotNull(Object obj, String msg)  throws  DostavItServiceException {
+    private static void validateNotNull(Object obj, String msg) throws DostavItServiceException {
         if (obj == null) {
             throw createDostavItServiceException(msg);
         }
