@@ -37,6 +37,7 @@ public class DostavItService {
     }
 
     public static CarrierInfo getCarrier(String carrierName) throws DostavItServiceException {
+        validateNotNull(carrierName, "Carrier name should not be null");
         try {
             String response = sendGetRequest(String.format("http://dostav.it/api/carriers/%s", carrierName));
             CarrierInfo carrierInfo = null;
@@ -58,6 +59,14 @@ public class DostavItService {
     }
 
     public static List<Rate> getRates(String carrier, String fromCity, String toCity, double lengthCm, double widthCm, double heightCm, double weightKg, BigDecimal costRub, Date shipDate) throws DostavItServiceException {
+        validateNotNull(carrier, "Carrier  should not be null");
+        validateNotNull(fromCity, "From city  should not be null");
+        validateNotNull(toCity, "To city  should not be null");
+        validateNotNull(lengthCm, "Length  should not be null");
+        validateNotNull(widthCm, "Width  should not be null");
+        validateNotNull(heightCm, "Height  should not be null");
+        validateNotNull(weightKg, "Weight should not be null");
+        validateNotNull(costRub, "Cost should not be null");
         try {
             String request = getJsonString(fromCity, toCity, lengthCm, widthCm, heightCm, weightKg, costRub, shipDate);
             String response = sendPostRequest(String.format("http://dostav.it/api/rates/%s", carrier), request.toString());
@@ -284,5 +293,15 @@ public class DostavItService {
 
     private static DostavItServiceException createDostavItServiceException(String msg, Exception e) {
         return new DostavItServiceException(msg, e);
+    }
+
+    private static DostavItServiceException createDostavItServiceException(String msg) {
+        return new DostavItServiceException(msg);
+    }
+
+    private static void validateNotNull(Object obj, String msg)  throws  DostavItServiceException {
+        if (obj == null) {
+            throw createDostavItServiceException(msg);
+        }
     }
 }
